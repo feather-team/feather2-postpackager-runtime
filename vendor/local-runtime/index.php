@@ -14,7 +14,7 @@ define('VIEW_PATH', PROJ_PATH . '/view/');
 define('TEST_PATH', PROJ_PATH . '/test/');
 define('CACHE_PATH', PROJ_PATH . '/cache/');
 
-$conf = load(PROJ_PATH . '/feather_conf.php', true);
+$conf = load(PROJ_PATH . '/conf.php', true);
 $conf = json_decode($conf, true);
 
 if(empty($conf)){
@@ -76,16 +76,16 @@ foreach ($rewrite as $key => $value){
 $path = $path ? $path : preg_replace('/[\?#].*/', '', $uri);
 $path = explode('/', trim($path, '/'));
 
-if(empty($path[0])) $path = array('page');
+if(empty($path[0])) $path = array('index');
 if($path[0] == 'page' && empty($path[1])) $path[1] = 'index' . $suffix;
 
 $tmpPath = implode('/', $path);
 $s = strrchr($tmpPath, '.');
 
-if($path[0] == 'page' || $path[0] == 'widget' || $path[0] == 'pagelet' || $s === false || $s == $suffix){
+if($s === false || $s == $suffix){
     require LIB_PATH . '/Feather_View.class.php';
 
-    load(TMP_PATH . '/feather_compatible.php');
+    load(TMP_PATH . '/compatible.php');
 
     //依赖map表测试的版本
     $view = new Feather_View();
@@ -101,12 +101,8 @@ if($path[0] == 'page' || $path[0] == 'widget' || $path[0] == 'pagelet' || $s ===
             'cache_dir' => CACHE_PATH
         );
 
-        if($conf['comboDebug'] && $conf['pack']){
+        if($conf['comboDebug']){
             $options['combo'] = $conf['comboDebug'];
-
-            if($conf['domain'] && empty($options['combo']['domain'])){
-                $options['combo']['domain'] = "http://{$_SERVER['HTTP_HOST']}";
-            }
         }
 
         $view->registerPlugin('autoload_static', $options);
@@ -149,7 +145,7 @@ if($path[0] == 'page' || $path[0] == 'widget' || $path[0] == 'pagelet' || $s ===
             header("status: 404 not found"); 
             exit;
         }
-        
+
         $output = file_get_contents($_path);
         $type = getMime($tmpPath);
         header("Content-type: {$type};");

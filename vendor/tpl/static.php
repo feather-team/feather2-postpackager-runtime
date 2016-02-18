@@ -4,6 +4,7 @@ switch($type){
 		if(!$this->get('FEATHER_HEAD_RESOURCE_LOADED')){
 			$links = $this->get('FEATHER_USE_STYLES');
 			$scripts = $this->get('FEATHER_USE_HEAD_SCRIPTS');
+			$inlineScripts = $this->get('FEATHER_USE_HEAD_INLINE_SCRIPTS');
 			$this->set('FEATHER_HEAD_RESOURCE_LOADED', true);
 		}
 
@@ -27,6 +28,12 @@ if(!empty($links)){
 if(!empty($scripts)){
 	foreach($scripts as $key => $value){
 		$output[] = '<script src="' . $value . '"></script>';
+	}
+}
+
+if(!empty($inlineScripts)){
+	foreach($inlineScripts as $key => $value){
+		$output[] = $value;
 	}
 }
 

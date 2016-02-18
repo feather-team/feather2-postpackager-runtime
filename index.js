@@ -17,5 +17,7 @@ module.exports = function(ret, conf, setting, opt){
 	    ret.pkg[file.subpath] = file;
 	});
 
-	require('./process/local-runtime.js')(ret, conf, setting, opt);
+	if(opt.dest == 'preview'){
+		require('./process/local-runtime.js')(ret, conf, setting, opt);
+	}
 };

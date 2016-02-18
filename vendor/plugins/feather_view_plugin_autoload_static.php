@@ -14,6 +14,7 @@ class Feather_View_Plugin_Autoload_Static extends Feather_View_Plugin_Abstract{
 	private $cache;
 	private $pkgUrlCache = array();
 	private static $RESOURCES_TYPE = array('headJs', 'bottomJs', 'css');
+	private static $CONCATS_TYPE = array('headJs', 'bottomJs', 'css', 'asyncs', 'deps');
 
 	protected function initialize(){
 		if($domain = $this->getOption('domain')){
@@ -28,16 +29,7 @@ class Feather_View_Plugin_Autoload_Static extends Feather_View_Plugin_Abstract{
 	}
 
 	private function initMapSources(){
-		$sources = $this->getOption('map');
-
-		if(empty($sources)){
-			$sources = $this->getOption('maps');
-
-			if(empty($sources)){
-				//兼容
-				$sources = $this->getOption('resources');
-			}	
-		}
+		$sources = $this->getOption('maps');
 
 		if(empty($sources) && !empty($this->view->template_dir)){
 			$sources = array();
@@ -45,8 +37,6 @@ class Feather_View_Plugin_Autoload_Static extends Feather_View_Plugin_Abstract{
 			foreach((array)$this->view->template_dir as $dir){
 				if(file_exists("{$dir}/map")){
 					$sources = array_merge($sources, glob("{$dir}/map/**.php"));
-				}else{
-					$sources = array_merge($sources, glob("{$dir}/../map/**.php"));
 				}
 			}
 		}
@@ -121,14 +111,23 @@ class Feather_View_Plugin_Autoload_Static extends Feather_View_Plugin_Abstract{
 	private function getSelfMap($path){
 		$selfMap = isset($this->map[$path]) ? $this->map[$path] : array();
 
-		if(isset($selfMap['widget'])){
-			$widgetMap = array();
+		if(isset($selfMap['refs'])){
+			$refsMap = array();
 
-			foreach($selfMap['widget'] as $widget){
-				$widgetMap = array_merge_recursive($widgetMap, $this->getSelfMap($widget));
+			foreach($selfMap['refs'] as $ref){
+				$refMap = $this->getSelfMap($ref);
+
+				//去掉其他的数据
+				foreach($refMap as $key => $value){
+					if(array_search($key, self::$CONCATS_TYPE) === false){
+						unset($refMap[$key]);
+					}
+				}
+
+				$refsMap = array_merge_recursive($refsMap, $refMap);
 			}
 
-			return array_merge_recursive($widgetMap, $selfMap);
+			return array_merge_recursive($refsMap, $selfMap);
 		}
 
 		return $selfMap;
@@ -138,8 +137,11 @@ class Feather_View_Plugin_Autoload_Static extends Feather_View_Plugin_Abstract{
 		$maps = $this->map;
 		$selfMap = $this->getSelfMap($path);
 
-		if(!isset($selfMap['isPagelet']) && !empty($selfMap['async'])){
-			$selfMap = array_merge_recursive($this->commonMap, $selfMap);
+		//如果不是pagelet，并且asyncs和deps不为空时，说明是一个正常，并且需要使用通用js
+		if(!isset($selfMap['isPagelet'])){
+			if(!empty($selfMap['asyncs']) || !empty($selfMap['deps'])){
+				$selfMap = array_merge_recursive($this->commonMap, $selfMap);
+			}
 		}
 
 		$tmpCss = array();
@@ -150,16 +152,16 @@ class Feather_View_Plugin_Autoload_Static extends Feather_View_Plugin_Abstract{
 		foreach(self::$RESOURCES_TYPE as $type){
 			if(isset($selfMap[$type])){
 				$ms = $selfMap[$type];
-				$tmp = $this->getUrl($ms, false);
+				$tmp = $this->getUrl($ms, true, true);
 
 				if($type != 'css'){
 					$final = array();
 
-					foreach($tmp as $v){
+					foreach($tmp as $k => $v){
 						if(strrchr($v, '.') == '.css'){
-							array_push($tmpCss, $v);
+							$tmpCss[$k] = $v;
 						}else{
-							array_push($final, $v);
+							$final[$k] = $v;
 						}
 					}
 
@@ -172,12 +174,9 @@ class Feather_View_Plugin_Autoload_Static extends Feather_View_Plugin_Abstract{
 			}
 		}
 
-		if(isset($selfMap['async'])){
-			$requires = array_merge($requires, $selfMap['async']);
-		}
-
-		if(!empty($requires)){
-			$finalRequires = $this->getUrl($requires, false, true);
+		if(!empty($selfMap['asyncs'])){
+			$requires = $selfMap['asyncs'];
+			$finalRequires = $this->getUrl($requires, true);
 		}
 
 		//get require info
@@ -185,15 +184,6 @@ class Feather_View_Plugin_Autoload_Static extends Feather_View_Plugin_Abstract{
 		$finalDeps = array();
 
 		foreach($finalRequires as $key => $value){
-			if(!array_search($key, $requires) 
-				&& strrchr($key, '.') == '.css' 
-				&& isset($maps[$key]) 
-				&& (!isset($maps[$key]['isMod']) || isset($maps[$key]['isComponent']))
-			){
-				array_push($finalResources['css'], $value);
-				continue;
-			}
-
 			if(!isset($finalMap[$value])){
 				$finalMap[$value] = array();
 			}
@@ -203,22 +193,8 @@ class Feather_View_Plugin_Autoload_Static extends Feather_View_Plugin_Abstract{
 			if(isset($maps[$key])){
 				$info = $maps[$key];
 
-				if(isset($info['deps']) && isset($info['isMod'])){
-					if(isset($info['isComponent'])){
-						$deps = array();
-
-						foreach($info['deps'] as $dep){
-							if(strrchr($dep, '.') != '.css'){
-								$deps[] = $dep;
-							}
-						}
-
-						if(!empty($deps)){
-							$finalDeps[$key] = $deps;
-						}
-					}else{
-						$finalDeps[$key] = $info['deps'];
-					}
+				if(isset($info['deps'])){
+					$finalDeps[$key] = $info['deps'];
 				}
 			}
 		}
@@ -231,67 +207,58 @@ class Feather_View_Plugin_Autoload_Static extends Feather_View_Plugin_Abstract{
 
 		//get real url
 		foreach($finalResources as &$resources){
-			$resources = array_unique($resources);
-
 			//do combo
 			if(!empty($this->combo) && !empty($resources)){
 				$combos = array();
 				$remotes = array();
 
-				foreach($resources as $v){
-					if(!self::isRemoteUrl($v)){
-						if(empty($this->combo['level']) && array_search($v, $this->pkgUrlCache) === false || !empty($this->combo['level'])){
-							$combos[] = $v;
+				foreach($resources as $id => $url){
+					if(isset($maps[$id])){
+						if(empty($this->combo['level']) && array_search($url, $this->pkgUrlCache) === false || !empty($this->combo['level'])){
+							$combos[] = $url;
 						}else{
-							$remotes[] = $v;
+							$remotes[] = $url;
 						}
 					}else{
-						$remotes[] = $v;
+						$remotes[] = $url;
 					}
 				}
 
 				$resources = $remotes;
 
 				//if same baseurl concat
-				if(!empty($this->combo['sameBaseUrl'])){
-					$combosDirGroup = array();
+				$needSameBaseUrl = !empty($this->combo['sameBaseUrl']);
+				$combosDirGroup = array();
 
-					foreach($combos as $url){
-						$baseurl = dirname($url);
-						$combosDirGroup[$baseurl][] = $url;
+				foreach($combos as $url){
+					if($needSameBaseUrl){
+						$baseurl = dirname($url) . '/';
+					}else{
+						preg_match('#^(?:(?:https?:)?//)?[^/]+/#', $url, $data);
+						$baseurl = $data[0];
 					}
 
-					foreach($combosDirGroup as $dir => $urls){
-						if(count($urls) > 1){
-							$baseNames = array();
-
-							foreach($urls as $url){
-								$baseNames[] = basename($url);
-							}
-
-							$resources[] = (!empty($this->combo['domain']) ? $this->combo['domain'] : $this->domain) . $dir . '??' . implode(',', $baseNames); 
-						}else{
-							$resources[] = $this->domain . $urls[0];
-						}	
-					}	
-				}else{
-					if(count($combos) > 1){
-						$combos = (!empty($this->combo['domain']) ? $this->combo['domain'] : $this->domain) . '/??' . implode(',', $combos); 
-						$resources[] = $combos;
-					}else{
-						foreach($combos as $v){
-							$resources[] = $this->domain . $v;		
-						}
-					}		
+					$combosDirGroup[$baseurl][] = $url;
 				}
-			}else{
-				// foreach($resources as &$v){
-				// 	if(!self::isRemoteUrl($v)){
-				// 		$v = $this->domain . $v;
-				// 	}
-				// }
 
-				// unset($v);
+				foreach($combosDirGroup as $dir => $urls){
+					$urls = array_unique($urls);
+					
+					if(count($urls) > 1){
+						$baseNames = array();
+						$len = strlen($dir);
+
+						foreach($urls as $url){
+							$baseNames[] = substr($url, $len);
+						}
+
+						$resources[] = $dir . '??' . implode(',', $baseNames); 
+					}else{
+						$resources[] = $urls[0];
+					}	
+				}	
+			}else{
+				$resources = array_unique(array_values($resources));
 			}
 		}
 
@@ -306,7 +273,7 @@ class Feather_View_Plugin_Autoload_Static extends Feather_View_Plugin_Abstract{
 		return $finalResources;
 	}
 
-	private function getUrl($resources, $withDomain = true, $returnHash = false, &$hash = array(), &$pkgHash = array()){
+	private function getUrl($resources, $returnHash = false, $includeNotFound = false, &$hash = array(), &$pkgHash = array()){
 		$urls = array();
 		$maps = $this->map;
 
@@ -324,49 +291,34 @@ class Feather_View_Plugin_Autoload_Static extends Feather_View_Plugin_Abstract{
 						if(!isset($pkgHash[$name])){
 							$pkg = $maps[$name];
 							//缓存
-							$url = $hash[$v] = $pkgHash[$name] = $withDomain ? $this->domain . $pkg['url'] : $pkg['url'];
-							//如果pkg有deps，并且不是mod，说明多个非mod文件合并，需要同时加载他们中所有的文件依赖，防止页面报错
-							if(!isset($info['isMod'])){
-								if(isset($pkg['deps'])){
-									$urls = array_merge($urls, $this->getUrl($pkg['deps'], $withDomain, $returnHash, $hash, $pkgHash));
-								}
-								
-								if(isset($pkg['async'])){
-									$urls = array_merge($urls, $this->getUrl($pkg['async'], $withDomain, $returnHash, $hash, $pkgHash));
-								}
-							}
+							$url = $hash[$v] = $pkgHash[$name] = $pkg['url'];
 						}else{
 							$url = $hash[$v] = $pkgHash[$name];
 							if(array_search($url, $this->pkgUrlCache) === false){
 								$this->pkgUrlCache[] = $url;
 							}
 						}
-						//如果自己有deps，并且是mod，则可以不通过pkg加载依赖，只需要加载自己的依赖就可以了，mod为延迟加载。
-						if(isset($info['isMod'])){
-							if(isset($info['deps'])){
-								$urls = array_merge($urls, $this->getUrl($info['deps'], $withDomain, $returnHash, $hash, $pkgHash));
-							}
-
-							if(isset($info['async'])){
-								$urls = array_merge($urls, $this->getUrl($info['async'], $withDomain, $returnHash, $hash, $pkgHash));
-							}	
-						}
 					}else{
-						$url = $hash[$v] = $withDomain ? $this->domain . $info['url'] : $info['url'];
-						//如果自己有deps，没打包，直接加载依赖
-						if(isset($info['deps'])){
-							$urls = array_merge($urls, $this->getUrl($info['deps'], $withDomain, $returnHash, $hash, $pkgHash));
-						}
-
-						if(isset($info['async'])){
-							$urls = array_merge($urls, $this->getUrl($info['async'], $withDomain, $returnHash, $hash, $pkgHash));
-						}	
+						$url = $hash[$v] = $info['url'];
 					}
+
+					//如果自己有deps，没打包，直接加载依赖
+					if(isset($info['deps'])){
+						$urls = array_merge($urls, $this->getUrl($info['deps'], $returnHash, $includeNotFound, $hash, $pkgHash));
+					}
+
+					if(isset($info['async'])){
+						$urls = array_merge($urls, $this->getUrl($info['async'], $returnHash, $includeNotFound, $hash, $pkgHash));
+					}	
 				}else{
 					$url = $hash[$v];
 				}
 			}else{
 				$url = $v;
+
+				if($includeNotFound){
+					$hash[$v] = $v;
+				}
 			}
 			
 			$urls[] = $url;
@@ -421,13 +373,12 @@ class Feather_View_Plugin_Autoload_Static extends Feather_View_Plugin_Abstract{
 			$headJsInline = array();
 
 			if(!empty($resources['requires']) && !empty($resources['requires']['map']) && $this->useRequire){
-				$config = $resources['requires'];
-				$config['domain'] = $this->domain;
-				$headJsInline[] = '<script>require.mergeConfig(' . self::jsonEncode($config) . ')</script>';
+				$headJsInline[] = '<script>require.mergeConfig(' . self::jsonEncode($resources['requires']) . ')</script>';
 			}
 		
 			$cache = array(
 				'FEATHER_USE_HEAD_SCRIPTS' => $resources['headJs'],
+				'FEATHER_USE_HEAD_INLINE_SCRIPTS' => $headJsInline,
 		        'FEATHER_USE_SCRIPTS' => $resources['bottomJs'],
 				'FEATHER_USE_STYLES' => $resources['css'],
 				'MAX_LAST_MODIFY_TIME' => $lastModifyTime,

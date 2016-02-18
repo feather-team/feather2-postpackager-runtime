@@ -5,24 +5,12 @@ DEV环境 FEATHER 结合模版引擎 进行本地调试所需要的资源生成
 'use strict';
 
 module.exports = function(ret, conf, setting, opt){
-    var staticMode = feather.config.get('staticMode');
-
-    if(opt.dest != 'preview'){
-        feather.util.map(ret.src, function(subpath, file){
-            if(/^\/(?:feather_|test\/)/.test(subpath)){
-                file.release = false;
-            }
-        });
-
-        return;
-    }
-
     var modulename = feather.config.get('project.modulename'), ns = feather.config.get('project.name');
     var www = feather.project.getTempPath('www'), php = www + '/php', vendor = __dirname + '/../vendor/local-runtime';
     var proj = www + '/proj/' + ns;
 
 
-    if(!staticMode){
+    if(feather.config.get('project.mode') == 'php'){
         var root = feather.project.getProjectPath();
 
         if(modulename){
@@ -45,7 +33,7 @@ module.exports = function(ret, conf, setting, opt){
         media: feather.project.currentMedia()
     };
 
-    feather.util.write(proj + '/feather_conf.php', feather.util.json(hash));
+    feather.util.write(proj + '/conf.php', feather.util.json(hash));
     feather.util.mkdir(proj + '/cache');
     feather.util.write(www + '/index.php', feather.file.wrap(vendor + '/index.php').getContent());
     feather.util.write(www + '/c_proj', ns);
