@@ -166,13 +166,13 @@ class Feather_View_Plugin_Autoload_Static extends Feather_View_Plugin_Abstract{
 					}
 
 					$finalResources[$type] = $final;
-				}else{
-					$finalResources[$type] = array_merge($tmp, $tmpCss);
 				}
 			}else{
 				$finalResources[$type] = array();
 			}
 		}
+
+		$finalResources['css'] = array_merge($finalResources['css'], $tmpCss);
 
 		if(!empty($selfMap['asyncs'])){
 			$requires = $selfMap['asyncs'];
