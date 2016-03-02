@@ -1,6 +1,7 @@
 <?php
 class Feather_View_Plugin_Autoload_Test_Data extends Feather_View_Plugin_Abstract{
 	const TEST_FILE_SUFFIX = '.php';
+	const GLOBAL_FILE = '_global_.php';
 
 	private $map = array();
 
@@ -12,21 +13,21 @@ class Feather_View_Plugin_Autoload_Test_Data extends Feather_View_Plugin_Abstrac
 		}
 	}
 
-	//获取页面所有用到的components
-	private function getComponents($path){
+	//获取页面所有用到的refs
+	private function getRefs($path){
 		$selfMap = isset($this->map[$path]) ? $this->map[$path] : array();
 
-		if(isset($selfMap['components'])){
-			$selfComponents = $selfMap['components'];
+		if(isset($selfMap['refs'])){
+			$selfRefs = $selfMap['refs'];
 
-			foreach($selfComponents as $component){
-				$selfComponents = array_merge($selfComponents, $this->getComponents($component));
+			foreach($selfRefs as $ref){
+				$selfRef = array_merge($selfRef, $this->getRefs($ref));
 			}
 		}else{
-			$selfComponents = array();
+			$selfRefs = array();
 		}
 
-		return $selfComponents;
+		return $selfRefs;
 	}
 
 	public function exec($content, $info){
@@ -38,15 +39,18 @@ class Feather_View_Plugin_Autoload_Test_Data extends Feather_View_Plugin_Abstrac
 		$fData = array();
 
 		$path = $info['path'];
-		$components = $this->getComponents($path);
-		array_unshift($components, $path);
+		$refs = $this->getRefs($path);
+		array_push($refs, $path);
+		array_unshift($refs, self::GLOBAL_FILE);
 
-		foreach($components as $path){
+		foreach($refs as $path){
 			$info = pathinfo($path);
 			$path = "{$testRoot}{$info['dirname']}/{$info['filename']}" . self::TEST_FILE_SUFFIX;
 
-			if($data = @include($path)){
-				$fData = array_merge($data, $fData);
+			if(file_exists($path)){
+				if($data = include($path)){
+					$fData = array_merge($fData, $data);
+				}
 			}
 		}
 
