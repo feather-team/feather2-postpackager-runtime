@@ -1,11 +1,15 @@
 {
   "name": "feather2-postpackager-runtime",
   "version": "1.0.0",
-  "description": "",
+  "description": "feather2 运行环境处理，必要文件产出",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "author": "",
-  "license": "ISC"
+  "author": "jsyczhanghao@sina.com",
+  "license": "ISC",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/feather-team/feather2-postpackager-runtime.git"
+  }
 }
