@@ -309,8 +309,8 @@ class Feather_View_Plugin_Autoload_Static extends Feather_View_Plugin_Abstract{
 						$urls = array_merge($urls, $this->getUrl($info['deps'], $returnHash, $includeNotFound, $hash, $pkgHash));
 					}
 
-					if(isset($info['async'])){
-						$urls = array_merge($urls, $this->getUrl($info['async'], $returnHash, $includeNotFound, $hash, $pkgHash));
+					if(isset($info['asyncs'])){
+						$urls = array_merge($urls, $this->getUrl($info['asyncs'], $returnHash, $includeNotFound, $hash, $pkgHash));
 					}	
 				}else{
 					$url = $hash[$v];
