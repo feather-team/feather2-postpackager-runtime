@@ -2,6 +2,7 @@
 require dirname(__FILE__) . '/Feather_View_Loader.class.php';
 
 Feather_View_Loader::setImportPath(dirname(__FILE__));     
+Feather_View_Loader::import('Feather_View_Cache.class.php');
 Feather_View_Loader::import('Feather_View_Plugin_Abstract.class.php');
 
 class Feather_View{
@@ -44,34 +45,39 @@ class Feather_View{
     }
 
     //执行模版返回
-    public function fetch($path, $data = null, $isLoad = false){
+    public function fetch($path, $data = null, $method = null){
         if(!self::checkHasSuffix($path)){
             $path = $path . $this->suffix;
         }
 
-        $content = $this->callPlugins($this->loadFile($path), array(
-            'isLoad' => $isLoad,
-            'path' => $path
-        ));
+        if($realpath = self::foundRealPath($this->template_dir, $path)){
+            if($data){
+                $data = array_merge($this->data, $data);
+            }else{
+                $data = $this->data;
+            }
 
-        if($data){
-            $data = array_merge($this->data, $data);
+            $opts = array(
+                'method' => $method ? $method : __METHOD__,
+                'path' => $path,
+                'realpath' => $realpath
+            );
+
+            return $this->evalContent($data, $content, $path);
         }else{
-            $data = $this->data;
+            throw new Exception($path . ' is not exists!');
         }
-
-        return $this->evalContent($data, $content, $path);
     }
 
     //显示模版
     public function display($path, $charset = 'utf-8', $type = 'text/html'){
         self::sendHeader($charset, $type);
-        echo $this->fetch($path);
+        echo $this->fetch($path, null, __METHOD__);
     }
 
     public function flush($path, $charset = 'utf-8', $type = 'text/html'){
         self::sendHeader($charset, $type);
-        $content = $this->fetch($path);
+        $content = $this->fetch($path, null, __METHOD__);
         
         ob_start();
         echo $content;
@@ -81,29 +87,15 @@ class Feather_View{
 
     //内嵌加载一个文件
     public function load($path, $data = null){
-        echo $this->fetch("{$path}", $data, true);
+        echo $this->fetch("{$path}", $data, __METHOD__);
     }
 
-    //加载某一个文件内容
-    protected function loadFile($path){
-        $content = false;
+    public function require($path, $data = null){
+        return $this->load($path, $data);
+    }
 
-        foreach((array)$this->template_dir as $dir){
-            $realpath = $dir . '/' . $path;
-
-            if(($content = self::readFileContent($realpath)) !== false){
-                break;
-            }
-        }
-
-        //如果content获取不到，则直接获取path，path可为绝对路径
-        if($content === false){
-            if($content = self::readFileContent($path) === false){
-                throw new Exception($path . ' is not exists!');
-            }
-        }
-
-        return $content;
+    public function include($path, $data = null){
+        return $this->load($path, $data);
     }
 
     //注册一个系统级插件，该插件会在display或者fetch时，自动调用
@@ -150,10 +142,10 @@ class Feather_View{
         $dirs = (array)$this->plugins_dir;
 
         foreach((array)$this->template_dir as $dir){
-            array_push($dirs, "{$dir}/plugins");
+            $dirs[] = $dir . '/plugins';
         }
 
-        $dirs[] = dirname(__FILE__) . "/plugins";
+        $dirs[] = dirname(__FILE__) . '/plugins';
 
         return $dirs;
     }
@@ -166,10 +158,10 @@ class Feather_View{
 
         //if tmp dir exists, write tmp file and include;
         if($this->tmp_dir){
-            $filename489bc39ff0 = $this->tmp_dir . '/' . str_replace('/', '_', $path489bc39ff0) . microtime() . '.php';
+            $filename489bc39ff0 = str_replace('/', '_', $path489bc39ff0);
             file_put_contents($filename489bc39ff0, $content489bc39ff0);
             include $filename489bc39ff0;
-            @unlink($filename489bc39ff0);
+            //@unlink($filename489bc39ff0);
         }else{
             //evaluate code
             eval("?> {$content489bc39ff0}");
@@ -187,19 +179,27 @@ class Feather_View{
         !headers_sent() && header("Content-type: {$type}; charset={$charset}");
     }
 
+    protected static function foundRealPath($dirs, $path){
+        foreach((array)$dirs as $dir){
+            $realpath = $dir . '/' . $path;
+
+            if(is_file($realpath)){
+                return $realpath;
+            }
+        }
+
+        if(is_file($path)){
+            return $path;
+        }
+
+        return false;
+    }
+
     protected static function checkHasSuffix($str){
         return !!preg_match('/\.[^\.]+$/', $str);
     }
 
     protected static function toUpperCase($match){
         return strtoupper($match[0]);
-    }
-
-    protected static function readFileContent($path){
-        if(is_file($path)){
-            return file_get_contents($path);
-        }
-
-        return false;
     }
 }
