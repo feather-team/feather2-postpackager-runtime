@@ -1,0 +1,12 @@
+{
+    "name": "a/b",
+    "authors": [
+        {
+            "name": "zhanghao",
+            "email": "jsyczhanghao@sina.com"
+        }
+    ],
+    "require": {
+    	"feather/view2": ">=0.1.0"
+    }
+}

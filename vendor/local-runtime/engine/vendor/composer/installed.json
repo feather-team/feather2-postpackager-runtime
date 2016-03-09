@@ -1,0 +1,37 @@
+[
+    {
+        "name": "feather/view2",
+        "version": "v0.1.0",
+        "version_normalized": "0.1.0.0",
+        "source": {
+            "type": "git",
+            "url": "https://github.com/feather-team/view2.0.git",
+            "reference": "12a82d92714b1eb9afe24f9d2ad095bd4fdc9175"
+        },
+        "dist": {
+            "type": "zip",
+            "url": "https://packagist.phpcomposer.com/files/feather-team/view2.0/12a82d92714b1eb9afe24f9d2ad095bd4fdc9175.zip",
+            "reference": "12a82d92714b1eb9afe24f9d2ad095bd4fdc9175",
+            "shasum": ""
+        },
+        "require": {
+            "php": ">=5.3.0"
+        },
+        "time": "2016-03-09 06:49:32",
+        "type": "library",
+        "installation-source": "dist",
+        "autoload": {
+            "psr-4": {
+                "FeatherView\\": "src/"
+            }
+        },
+        "notification-url": "https://packagist.org/downloads/",
+        "authors": [
+            {
+                "name": "zhanghao",
+                "email": "jsyczhanghao@sina.com"
+            }
+        ],
+        "description": "feather view 2.x"
+    }
+]
