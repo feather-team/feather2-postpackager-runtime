@@ -1,5 +1,7 @@
 <?php
-class Feather_View_Plugin_Script_Collection{
+namespace FeatherView\Plugin;
+
+class ScriptCollection{
 	protected $list = array();
 
 	public function start(){

@@ -1,8 +1,10 @@
 <?php
+namespace FeatherView\Plugin;
+
 /*
 自动加载动态资源插件
 */
-class Feather_View_Plugin_Autoload_Static extends Feather_View_Plugin_Abstract{
+class AutoloadStatic extends SystemAbstract{
 	private $map = array();	//缓存检查的map
 	private $mapSources = array();	//map来源
 	private $commonMap;	//common map
@@ -352,7 +354,7 @@ class Feather_View_Plugin_Autoload_Static extends Feather_View_Plugin_Abstract{
 
 	//执行主程
 	public function exec($content, $info){
-		if($info['isLoad']) return $content;
+		if($info['method'] == 'load') return $content;
 
 		$view = $this->view;
 		$view->set('FEATHER_STATIC_DOMAIN', $this->domain);

@@ -3,7 +3,7 @@ error_reporting(E_ALL);
 ini_set('display_errors', 'On');
 
 define('ROOT', dirname(__FILE__));
-define('LIB_PATH', ROOT . '/php/lib');
+define('LIB_PATH', ROOT . '/lib');
 
 $ns = load(ROOT . '/c_proj', true);
 
@@ -83,16 +83,16 @@ $tmpPath = implode('/', $path);
 $s = strrchr($tmpPath, '.');
 
 if($s === false || $s == $suffix){
-    require LIB_PATH . '/Feather_View.class.php';
+    require LIB_PATH . '/engine/vendor/autoload.php';
 
     load(TMP_PATH . '/compatible.php');
 
     //依赖map表测试的版本
-    $view = new Feather_View();
-    $view->template_dir = array(VIEW_PATH);
-    $view->suffix = $suffix;
-    $view->plugins_dir = ROOT . '/php/plugins';
-    $view->tmp_dir = CACHE_PATH;
+    $view = new FeatherView\Engine(array(
+        'templateDir' => array(VIEW_PATH),
+        'suffix' => $suffix,
+        'tempDir' => CACHE_PATH
+    ));
 
     if(!$conf['mode'] != 'php'){
         $options = array(
@@ -105,8 +105,8 @@ if($s === false || $s == $suffix){
             $options['combo'] = $conf['comboDebug'];
         }
 
-        $view->registerPlugin('autoload_static', $options);
-        $view->registerPlugin('autoload_test_data', array(
+        $view->registerSystemPlugin('autoload_static', $options);
+        $view->registerSystemPlugin('autoload_test_data', array(
             'maps' => glob(VIEW_PATH . '/map/**'),
             'data_dir' => TEST_PATH
         ));

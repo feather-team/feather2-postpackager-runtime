@@ -11,7 +11,7 @@ module.exports = function(ret, conf, setting, opt){
     }
 
 	['autoload_static', 'script_collection'].forEach(function(name){
-		var path = '/plugins/feather_view_plugin_' + name + '.php';
+		var path = '/plugins/' + name + '.php';
 		var file = feather.file.wrap(ROOT + path);
 	    file.setContent(feather.file.wrap(VENDOR_DIR + path).getContent());
 	    ret.pkg[file.subpath] = file;

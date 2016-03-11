@@ -1,5 +1,7 @@
 <?php
-class Feather_View_Plugin_Autoload_Test_Data extends Feather_View_Plugin_Abstract{
+namespace FeatherView\Plugin;
+
+class AutoloadTestData extends SystemAbstract{
 	const TEST_FILE_SUFFIX = '.php';
 	const GLOBAL_FILE = '_global_.php';
 
@@ -31,7 +33,7 @@ class Feather_View_Plugin_Autoload_Test_Data extends Feather_View_Plugin_Abstrac
 	}
 
 	public function exec($content, $info){
-		if($info['isLoad']) return $content;
+		if($info['method'] == 'load') return $content;
 
 		$this->initMap();
 
