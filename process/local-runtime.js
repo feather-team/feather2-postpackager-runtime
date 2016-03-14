@@ -6,7 +6,7 @@ DEV环境 FEATHER 结合模版引擎 进行本地调试所需要的资源生成
 
 module.exports = function(ret, conf, setting, opt){
     var modulename = feather.config.get('project.modulename'), ns = feather.config.get('project.name');
-    var www = feather.project.getTempPath('www'), vendor = __dirname + '/../vendor/local-runtime';
+    var www = feather.project.getTempPath('www'), previewRoot = www + '/preview', vendor = __dirname + '/../vendor/local-runtime';
     var proj = www + '/proj/' + ns;
 
 
@@ -35,13 +35,13 @@ module.exports = function(ret, conf, setting, opt){
 
     feather.util.write(proj + '/conf.php', feather.util.json(hash));
     feather.util.mkdir(proj + '/cache');
-    feather.util.write(www + '/index.php', feather.file.wrap(vendor + '/index.php').getContent());
-    feather.util.write(www + '/c_proj', ns);
+    feather.util.write(previewRoot + '/index.php', feather.file.wrap(vendor + '/index.php').getContent());
+    feather.util.write(previewRoot + '/c_proj', ns);
 
     var rootLen = feather.util.realpath(vendor).length;
 
     feather.util.find(vendor + '/lib').forEach(function(item){
-        feather.util.write(www + item.substring(rootLen), feather.util.read(item));
+        feather.util.write(proj + item.substring(rootLen), feather.util.read(item));
     });
 
     feather.util.find(vendor + '/plugins').forEach(function(item){

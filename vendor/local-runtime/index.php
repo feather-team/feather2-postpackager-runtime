@@ -2,12 +2,12 @@
 error_reporting(E_ALL);
 ini_set('display_errors', 'On');
 
-define('ROOT', dirname(__FILE__));
-define('LIB_PATH', ROOT . '/lib');
+define('ROOT', __DIR__);
 
 $ns = load(ROOT . '/c_proj', true);
 
-define('PROJ_PATH', ROOT . '/proj/' . $ns);
+define('PROJ_PATH', ROOT . '/../proj/' . $ns);
+define('LIB_PATH', PROJ_PATH . '/lib');
 define('STATIC_PATH', PROJ_PATH . '/static/');
 define('TMP_PATH', PROJ_PATH . '/tmp/');
 define('VIEW_PATH', PROJ_PATH . '/view/');
@@ -110,7 +110,7 @@ if($s === false || $s == $suffix){
             'maps' => glob(VIEW_PATH . '/map/**'),
             'data_dir' => TEST_PATH
         ));
-        $view->registerPlugin('static_position');
+        $view->registerSystemPlugin('static_position');
     }
 
     $path = '/' . preg_replace('/\..+$/', '', implode('/', $path));

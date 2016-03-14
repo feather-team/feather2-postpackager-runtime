@@ -1,7 +1,7 @@
 <?php
 namespace FeatherView\Plugin;
 
-class StaticPosition extends SystemAbstract{
+class StaticPosition extends SystemPluginAbstract{
     public function exec($content, $info){
         if(!$info['method'] == 'load' && strpos($info['path'], '/widget/') === 0){
             if(!preg_match('#<!--FEATHER STATIC POSITION:HEAD-->#', $content)){

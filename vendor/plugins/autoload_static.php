@@ -4,7 +4,7 @@ namespace FeatherView\Plugin;
 /*
 自动加载动态资源插件
 */
-class AutoloadStatic extends SystemAbstract{
+class AutoloadStatic extends SystemPluginAbstract{
 	private $map = array();	//缓存检查的map
 	private $mapSources = array();	//map来源
 	private $commonMap;	//common map
@@ -33,12 +33,16 @@ class AutoloadStatic extends SystemAbstract{
 	private function initMapSources(){
 		$sources = $this->getOption('maps');
 
-		if(empty($sources) && !empty($this->view->template_dir)){
-			$sources = array();
+		if(empty($sources)){
+			$dirs = $this->view->getTemplateDir();
 
-			foreach((array)$this->view->template_dir as $dir){
-				if(file_exists("{$dir}/map")){
-					$sources = array_merge($sources, glob("{$dir}/map/**.php"));
+			if(!empty($dirs)){
+				$sources = array();
+
+				foreach((array)$this->view->getTemplateDir() as $dir){
+					if(file_exists("{$dir}/map")){
+						$sources = array_merge($sources, glob("{$dir}/map/**.php"));
+					}
 				}
 			}
 		}

@@ -1,7 +1,7 @@
 <?php
 namespace FeatherView\Plugin;
 
-class AutoloadTestData extends SystemAbstract{
+class AutoloadTestData extends SystemPluginAbstract{
 	const TEST_FILE_SUFFIX = '.php';
 	const GLOBAL_FILE = '_global_.php';
 

@@ -36,7 +36,7 @@ class Helper{
      * @return string|bool
      */
     public static function findFile($dirs, $path, $suffix = '.php'){
-        if(!self::getFileSuffix($path)){
+        if($suffix && !self::getFileSuffix($path)){
             $path = $path . $suffix;
         }
 

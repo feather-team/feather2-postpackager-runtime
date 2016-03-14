@@ -61,12 +61,15 @@ class Engine{
 
     public function addTemplateDir($dirs = ''){
         $this->templateDir = array_merge($this->templateDir, (array)$dirs);
+        $pluginDirs = array_merge($this->templateDir, array(__DIR__));
 
-        foreach($this->templateDir as $dir){
+        foreach($pluginDirs as $dir){
             $this->pluginManager->addPluginDir($dir . '/plugins');
         }
+    }
 
-        $this->pluginManager->addPluginDir(__DIR__ . '/plugins');
+    public function getTemplateDir(){
+        return $this->templateDir;
     }
 
     public function setTemplateSuffix($suffix){
@@ -107,7 +110,11 @@ class Engine{
 
     //执行模版返回
     public function fetch($path, $data = null, $method = null){
-        if($realpath = Helper::findFile($this->templateDir, $path, $this->suffix)){
+        if(!Helper::getFileSuffix($path)){
+            $path = $path . $this->suffix;
+        }
+
+        if($realpath = Helper::findFile($this->templateDir, $path, null)){
             if($data){
                 $data = array_merge($this->data, $data);
             }else{
@@ -116,7 +123,8 @@ class Engine{
 
             $content = Helper::readFile($realpath);
             $content = $this->pluginManager->callSystemPlugins($content, array(
-                'method' => $method ? $method : __METHOD__,
+                'isLoad' => $method == 'load',
+                'method' => $method ? $method : 'fetch',
                 'path' => $path,
                 'realpath' => $realpath,
                 'data' => $data
@@ -131,12 +139,12 @@ class Engine{
     //显示模版
     public function display($path, $charset = 'utf-8', $type = 'text/html'){
         self::sendHeader($charset, $type);
-        echo $this->fetch($path, null, __METHOD__);
+        echo $this->fetch($path, null, 'display');
     }
 
     public function flush($path, $charset = 'utf-8', $type = 'text/html'){
         self::sendHeader($charset, $type);
-        $content = $this->fetch($path, null, __METHOD__);
+        $content = $this->fetch($path, null, 'flush');
         
         ob_start();
         echo $content;
@@ -146,7 +154,7 @@ class Engine{
 
     //内嵌加载一个文件
     public function load($path, $data = null){
-        echo $this->fetch($path, $data, __METHOD__);
+        echo $this->fetch($path, $data, 'load');
     }
 
     //evaluate content
@@ -156,8 +164,8 @@ class Engine{
         extract($data489bc39ff0);
 
         //if tmp dir exists, write tmp file and include;
-        if($this->tmpDir){
-            $filename489bc39ff0 = $this->tmpDir . '/' . str_replace('/', '_', $path489bc39ff0) . uniqid() . '.php';
+        if($this->tempDir){
+            $filename489bc39ff0 = $this->tempDir . '/' . str_replace('/', '_', $path489bc39ff0) . uniqid() . '.php';
             file_put_contents($filename489bc39ff0, $content489bc39ff0);
             include $filename489bc39ff0;
             unlink($filename489bc39ff0);
