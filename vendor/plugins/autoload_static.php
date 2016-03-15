@@ -1,5 +1,6 @@
 <?php
 namespace FeatherView\Plugin;
+use FeatherView;
 
 /*
 自动加载动态资源插件
@@ -11,9 +12,9 @@ class AutoloadStatic extends SystemPluginAbstract{
 	private $useRequire;
 	private $mapLoaded = array();	//缓存map source
 	private $domain;
-	private $caching;
 	private $combo;
-	private $cache;
+	private $caching;
+	private $urlCache = array();
 	private $pkgUrlCache = array();
 	private static $RESOURCES_TYPE = array('headJs', 'bottomJs', 'css');
 	private static $CONCATS_TYPE = array('headJs', 'bottomJs', 'css', 'asyncs', 'deps');
@@ -25,8 +26,8 @@ class AutoloadStatic extends SystemPluginAbstract{
 			$this->domain = '';
 		}
 
-		$this->caching = $this->getOption('caching');
-		$this->combo = $this->getOption('combo');
+		$this->combo = $this->getOption('combo', array());
+		$this->caching = $this->getOption('caching', false);
 		$this->initMapSources();
 	}
 
@@ -158,16 +159,16 @@ class AutoloadStatic extends SystemPluginAbstract{
 		foreach(self::$RESOURCES_TYPE as $type){
 			if(isset($selfMap[$type])){
 				$ms = $selfMap[$type];
-				$tmp = $this->getUrl($ms, true, true);
+				$tmp = $this->getUrl($ms, false, true);
 
 				if($type != 'css'){
 					$final = array();
 
-					foreach($tmp as $k => $v){
+					foreach($tmp as $v){
 						if(strrchr($v, '.') == '.css'){
-							$tmpCss[$k] = $v;
+							$tmpCss[] = $v;
 						}else{
-							$final[$k] = $v;
+							$final[] = $v;
 						}
 					}
 
@@ -216,13 +217,13 @@ class AutoloadStatic extends SystemPluginAbstract{
 		//get real url
 		foreach($finalResources as &$resources){
 			//do combo
-			if(!empty($this->combo) && !empty($resources)){
+			if(isset($this->combo['level']) && $this->combo['level'] > -1 && !empty($resources)){
 				$combos = array();
 				$remotes = array();
 
-				foreach($resources as $id => $url){
-					if(isset($maps[$id])){
-						if(empty($this->combo['level']) && array_search($url, $this->pkgUrlCache) === false || !empty($this->combo['level'])){
+				foreach($resources as $url){
+					if(isset($this->urlCache[$url])){
+						if($this->combo['level'] == '0' && !isset($this->pkgUrlCache[$url]) || $this->combo['level'] > 0){
 							$combos[] = $url;
 						}else{
 							$remotes[] = $url;
@@ -235,7 +236,7 @@ class AutoloadStatic extends SystemPluginAbstract{
 				$resources = $remotes;
 
 				//if same baseurl concat
-				$needSameBaseUrl = !empty($this->combo['sameBaseUrl']);
+				$needSameBaseUrl = !empty($this->combo['onlySameBaseUrl']);
 				$combosDirGroup = array();
 
 				foreach($combos as $url){
@@ -299,25 +300,40 @@ class AutoloadStatic extends SystemPluginAbstract{
 						if(!isset($pkgHash[$name])){
 							$pkg = $maps[$name];
 							//缓存
-							$url = $hash[$v] = $pkgHash[$name] = $pkg['url'];
-						}else{
-							$url = $hash[$v] = $pkgHash[$name];
-							if(array_search($url, $this->pkgUrlCache) === false){
-								$this->pkgUrlCache[] = $url;
-							}
+							$this->pkgUrlCache[$pkgHash[$name] = $pkg['url']] = true;
 						}
+
+						$url = $hash[$v] = $pkgHash[$name];
 					}else{
 						$url = $hash[$v] = $info['url'];
 					}
 
+					$this->urlCache[$url] = true;
+
 					//如果自己有deps，没打包，直接加载依赖
 					if(isset($info['deps'])){
-						$urls = array_merge($urls, $this->getUrl($info['deps'], $returnHash, $includeNotFound, $hash, $pkgHash));
+						$urls = array_merge($this->getUrl($info['deps'], $returnHash, $includeNotFound, $hash, $pkgHash), $urls);
 					}
 
 					if(isset($info['asyncs'])){
-						$urls = array_merge($urls, $this->getUrl($info['asyncs'], $returnHash, $includeNotFound, $hash, $pkgHash));
+						$urls = array_merge($this->getUrl($info['asyncs'], $returnHash, $includeNotFound, $hash, $pkgHash), $urls);
 					}	
+
+					//这边需要做处理的，pkg中所有的文件都没有使用jswraper时，为了避免其他文件报错，则避免引入所有文件的依赖。
+					if(isset($pkg) && (isset($pkg['useJsWraper']) || !$this->useRequire)){
+						$noWraperHas = array();
+
+						foreach($pkg['has'] as $has){
+							//只分析，当前没有分析过的文件
+							if(!isset($hash[$has])){
+								$noWraperHas[] = $has;
+							}
+						}
+
+						if(!empty($noWraperHas)){
+							$urls = array_merge($this->getUrl($noWraperHas, $returnHash, $includeNotFound, $hash, $pkgHash), $urls);
+						}
+					}
 				}else{
 					$url = $hash[$v];
 				}
@@ -335,45 +351,32 @@ class AutoloadStatic extends SystemPluginAbstract{
 		return !$returnHash ? array_unique($urls) : $hash;
 	}
 
-	private function getCache(){
-		if(!$this->cache){
-			$cache = $this->getOption('cache');
-
-			if(!$cache){
-				//默认使用file 缓存
-				Feather_View_Loader::import('Feather_View_Plugin_Cache_File.class.php');
-
-			    $this->cache = new Feather_View_Plugin_Cache_File(array(
-			        'cache_dir' => $this->getOption('cache_dir')
-			    ));
-			}else if(is_object($cache) && is_a($cache, 'Feather_View_Plugin_Cache_Abstract')){
-				$this->cache = $cache;
-			}else{
-				$this->cache = new $cache;
-			}
-		}
-
-		return $this->cache;
-	}
-
 	//执行主程
 	public function exec($content, $info){
 		if($info['method'] == 'load') return $content;
 
 		$view = $this->view;
-		$view->set('FEATHER_STATIC_DOMAIN', $this->domain);
+		$this->domain && $view->set('FEATHER_STATIC_DOMAIN', $this->domain);
 
 		$lastModifyTime = $this->getMaxMapModifyTime();
+		$cacheFileName = md5($info['realpath']);
+		$cache = null;
 
-		$path = ltrim($info['path'], '/');
-		$rpath = md5($content) . $path;
-		$cache = $this->caching ? $this->getCache()->read($rpath) : null;
+		if($this->caching){
+			$cacheDir = $this->getOption('cacheDir', $this->view->getTempDir());
+			$cachePath = $cacheDir . '/' . $cacheFileName;
+
+			if($cache = FeatherView\Helper::readFile($cachePath)){
+				$cache = unserialize($cache);
+			}
+		}
 
 		if(!$cache 
 			|| !isset($cache['DOMAIN'])
 			|| $this->domain != $cache['DOMAIN'] 
 			|| $lastModifyTime > $cache['MAX_LAST_MODIFY_TIME']
 		){
+			$path = ltrim($info['path'], '/');
 			$this->initSelfMap($path);
 			$resources = $this->getSelfResources($path);
 
@@ -394,9 +397,8 @@ class AutoloadStatic extends SystemPluginAbstract{
 				'FILE_PATH' => $info['path']
 			);
 
-
 			//如果需要设置缓存
-			$this->caching && $this->getCache()->write($rpath, $cache);
+			$this->caching && FeatherView\Helper::writeFile($cachePath, serialize($cache));
 		}
 
 		//设置模版值

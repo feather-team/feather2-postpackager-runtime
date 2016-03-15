@@ -17,8 +17,8 @@ abstract class SystemPluginAbstract{
 
 	protected function initialize(){}
 
-	public function getOption($name = null){
-		return isset($this->options[$name]) ? $this->options[$name] : null;
+	public function getOption($name = null, $default = null){
+		return isset($this->options[$name]) ? $this->options[$name] : $default;
 	}
 
 	public function setOption($name, $value = null){

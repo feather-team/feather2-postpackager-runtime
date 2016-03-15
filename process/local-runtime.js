@@ -22,6 +22,12 @@ module.exports = function(ret, conf, setting, opt){
         }
     }
 
+    var cssA2R = feather.config.get('cssA2R');
+
+    if(cssA2R){
+        feather.config.set('combo.onlySameBaseUrl', true);
+    }
+
     //生成conf
     var hash = {
         ns: ns,
@@ -29,7 +35,7 @@ module.exports = function(ret, conf, setting, opt){
         template: {
             suffix: feather.config.get('template.suffix')
         },
-        comboDebug: feather.config.get('comboDebug'),
+        combo: feather.config.get('combo'),
         media: feather.project.currentMedia()
     };
 

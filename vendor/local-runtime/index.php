@@ -45,7 +45,7 @@ $uri = $_SERVER['REQUEST_URI'];
 
 $comboSplit = explode('??', $uri);
 
-if(!empty($conf['comboDebug']) && count($comboSplit) > 1){
+if(!empty($conf['combo']) && count($comboSplit) > 1){
     //is combo
     $tmp_files = explode(',', $comboSplit[1]);
     $content = array();
@@ -87,40 +87,39 @@ if($s === false || $s == $suffix){
 
     load(TMP_PATH . '/compatible.php');
 
-    //依赖map表测试的版本
-    $view = new FeatherView\Engine(array(
-        'templateDir' => array(VIEW_PATH),
-        'suffix' => $suffix,
-        'tempDir' => CACHE_PATH
-    ));
+    $engineConfig = load(VIEW_PATH . '/engine.config.php');
 
-    if(!$conf['mode'] != 'php'){
-        $options = array(
-            'domain' => "http://{$_SERVER['HTTP_HOST']}",
-            'caching' => false,
-            'cache_dir' => CACHE_PATH
+    if(!$engineConfig){
+        $engineConfig = array(
+            'templateDir' => VIEW_PATH,
+            'suffix' => $suffix,
+            'tempDir' => CACHE_PATH,
+            'systemPlugins' => array()
         );
+    }   
 
-        if($conf['comboDebug']){
-            $options['combo'] = $conf['comboDebug'];
-        }
+    $engineConfig['systemPlugins']['autoload_static']['combo'] = $conf['combo'];
+    $engineConfig['systemPlugins'] = array_merge($engineConfig['systemPlugins'], array(
+        'autoload_static' => array(
+           'domain' => "http://{$_SERVER['HTTP_HOST']}",
+           'combo' => $conf['combo'] 
+        ),
 
-        $view->registerSystemPlugin('autoload_static', $options);
-        $view->registerSystemPlugin('autoload_test_data', array(
+        'autoload_test_data' => array(
             'maps' => glob(VIEW_PATH . '/map/**'),
             'data_dir' => TEST_PATH
-        ));
-        $view->registerSystemPlugin('static_position');
-    }
+        ),
+
+        'static_position'
+    ));
+
+    //依赖map表测试的版本
+    $view = new FeatherView\Engine($engineConfig);
 
     $path = '/' . preg_replace('/\..+$/', '', implode('/', $path));
     $data = load(TEST_PATH . $path . '.php');
 
-    if(!is_array($data)){
-        $data = array();
-    }
-
-    $view->set($data);
+    is_array($data) && $view->set($data);
     $view->display($path);
 }else{
     if($path[0] == 'test'){

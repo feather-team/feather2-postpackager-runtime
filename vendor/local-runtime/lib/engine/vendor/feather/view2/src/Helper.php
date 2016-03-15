@@ -20,7 +20,11 @@ class Helper{
     }
 
     public static function readFile($file){
-        return file_get_contents($file);
+        if(is_file($file)){
+            return file_get_contents($file);
+        }
+
+        return false;
     }
 
     public static function writeFile($file, $content){

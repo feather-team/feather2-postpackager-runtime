@@ -25,7 +25,7 @@ class Engine{
                     $this->setTemplateSuffix($value);
                     break;
 
-                case 'plugins':
+                case 'systemPlugins':
                     $this->registerSystemPlugin($value);
                     break;
 
@@ -80,6 +80,10 @@ class Engine{
         $this->tempDir = $dir;
     }
 
+    public function getTempDir(){
+        return $this->tempDir;
+    }
+
     public function plugin($name, $opt = null){
         return $this->pluginManager->instance($name, $opt);
     }
@@ -123,7 +127,6 @@ class Engine{
 
             $content = Helper::readFile($realpath);
             $content = $this->pluginManager->callSystemPlugins($content, array(
-                'isLoad' => $method == 'load',
                 'method' => $method ? $method : 'fetch',
                 'path' => $path,
                 'realpath' => $realpath,
