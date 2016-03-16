@@ -11,7 +11,7 @@ define('LIB_PATH', PROJ_PATH . '/lib');
 define('STATIC_PATH', PROJ_PATH . '/static/');
 define('TMP_PATH', PROJ_PATH . '/tmp/');
 define('VIEW_PATH', PROJ_PATH . '/view/');
-define('TEST_PATH', PROJ_PATH . '/test/');
+define('DATA_PATH', PROJ_PATH . '/data/');
 define('CACHE_PATH', PROJ_PATH . '/cache/');
 
 $conf = load(PROJ_PATH . '/conf.php', true);
@@ -105,9 +105,9 @@ if($s === false || $s == $suffix){
            'combo' => $conf['combo'] 
         ),
 
-        'autoload_test_data' => array(
+        'autoload_data' => array(
             'maps' => glob(VIEW_PATH . '/map/**'),
-            'data_dir' => TEST_PATH
+            'data_dir' => DATA_PATH
         ),
 
         'static_position'
@@ -117,14 +117,14 @@ if($s === false || $s == $suffix){
     $view = new FeatherView\Engine($engineConfig);
 
     $path = '/' . preg_replace('/\..+$/', '', implode('/', $path));
-    $data = load(TEST_PATH . $path . '.php');
+    $data = load(DATA_PATH . $path . '.php');
 
     is_array($data) && $view->set($data);
     $view->display($path);
 }else{
-    if($path[0] == 'test'){
+    if($path[0] == 'data'){
         require LIB_PATH . '/MagicData.class.php';
-        $_path = TEST_PATH . '/' . implode('/', array_slice($path, 1));
+        $_path = DATA_PATH . '/' . implode('/', array_slice($path, 1));
 
         if(!is_file($_path)){
             header("{$_SERVER['SERVER_PROTOCOL']} 404 Not Found");

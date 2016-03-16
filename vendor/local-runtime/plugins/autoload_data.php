@@ -1,8 +1,8 @@
 <?php
 namespace FeatherView\Plugin;
 
-class AutoloadTestData extends SystemPluginAbstract{
-	const TEST_FILE_SUFFIX = '.php';
+class AutoloadData extends SystemPluginAbstract{
+	const DATA_FILE_SUFFIX = '.php';
 	const GLOBAL_FILE = '_global_.php';
 
 	private $map = array();
@@ -37,7 +37,7 @@ class AutoloadTestData extends SystemPluginAbstract{
 
 		$this->initMap();
 
-		$testRoot = rtrim($this->getOption('data_dir'), '/') . '/';
+		$dataRoot = rtrim($this->getOption('data_dir'), '/') . '/';
 		$fData = array();
 
 		$path = $info['path'];
@@ -47,7 +47,7 @@ class AutoloadTestData extends SystemPluginAbstract{
 
 		foreach($refs as $path){
 			$info = pathinfo($path);
-			$path = "{$testRoot}{$info['dirname']}/{$info['filename']}" . self::TEST_FILE_SUFFIX;
+			$path = "{$dataRoot}{$info['dirname']}/{$info['filename']}" . self::DATA_FILE_SUFFIX;
 
 			if(file_exists($path)){
 				if($data = include($path)){
