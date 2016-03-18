@@ -9,7 +9,6 @@ module.exports = function(ret, conf, setting, opt){
     var www = feather.project.getTempPath('www'), previewRoot = www + '/preview', vendor = __dirname + '/../vendor/local-runtime';
     var proj = www + '/proj/' + ns;
 
-
     if(feather.config.get('project.mode') == 'php'){
         var root = feather.project.getProjectPath();
 
@@ -36,6 +35,7 @@ module.exports = function(ret, conf, setting, opt){
             suffix: feather.config.get('template.suffix')
         },
         combo: feather.config.get('combo'),
+        cssA2R: feather.config.get('cssA2R'),
         media: feather.project.currentMedia()
     };
 

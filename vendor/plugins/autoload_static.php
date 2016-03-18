@@ -13,7 +13,6 @@ class AutoloadStatic extends SystemPluginAbstract{
 	private $mapLoaded = array();	//缓存map source
 	private $domain;
 	private $combo;
-	private $caching;
 	private $urlCache = array();
 	private $pkgUrlCache = array();
 	private static $RESOURCES_TYPE = array('headJs', 'bottomJs', 'css');
@@ -26,24 +25,20 @@ class AutoloadStatic extends SystemPluginAbstract{
 			$this->domain = '';
 		}
 
-		$this->combo = $this->getOption('combo', array());
-		$this->caching = $this->getOption('caching', false);
+		$this->combo = $this->getOption('combo', false);
 		$this->initMapSources();
 	}
 
 	private function initMapSources(){
-		$sources = $this->getOption('maps');
+		$sources = array();
+		$dirs = $this->view->getTemplateDir();
 
-		if(empty($sources)){
-			$dirs = $this->view->getTemplateDir();
+		if(!empty($dirs)){
+			$sources = array();
 
-			if(!empty($dirs)){
-				$sources = array();
-
-				foreach((array)$this->view->getTemplateDir() as $dir){
-					if(file_exists("{$dir}/map")){
-						$sources = array_merge($sources, glob("{$dir}/map/**.php"));
-					}
+			foreach((array)$this->view->getTemplateDir() as $dir){
+				if(file_exists("{$dir}/map")){
+					$sources = array_merge($sources, glob("{$dir}/map/**.php"));
 				}
 			}
 		}
@@ -215,32 +210,27 @@ class AutoloadStatic extends SystemPluginAbstract{
 		unset($v);
 
 		//get real url
+		$comboCssOnlySameBase = $this->getOption('comboCssOnlySameBase', false);
+
 		foreach($finalResources as &$resources){
 			//do combo
-			if(isset($this->combo['level']) && $this->combo['level'] > -1 && !empty($resources)){
+			if($this->combo && !empty($resources)){
 				$combos = array();
 				$remotes = array();
 
 				foreach($resources as $url){
 					if(isset($this->urlCache[$url])){
-						if($this->combo['level'] == '0' && !isset($this->pkgUrlCache[$url]) || $this->combo['level'] > 0){
-							$combos[] = $url;
-						}else{
-							$remotes[] = $url;
-						}
+						$combos[] = $url;
 					}else{
 						$remotes[] = $url;
 					}
 				}
 
 				$resources = $remotes;
-
-				//if same baseurl concat
-				$needSameBaseUrl = !empty($this->combo['onlySameBaseUrl']);
 				$combosDirGroup = array();
 
 				foreach($combos as $url){
-					if($needSameBaseUrl){
+					if($this->urlCache[$url]['type'] == 'css' && $comboCssOnlySameBase){
 						$baseurl = dirname($url) . '/';
 					}else{
 						preg_match('#^(?:(?:https?:)?//)?[^/]+/#', $url, $data);
@@ -274,10 +264,17 @@ class AutoloadStatic extends SystemPluginAbstract{
 		unset($resources);
 		//end
 		
-		$finalResources['requires'] = array(
+		$requires = array(
 			'map' => $finalMap,
 			'deps' => $finalDeps
 		);
+
+		if($this->combo){
+			$requires['combo'] = $this->combo;
+			$requires['comboCssOnlySameBase'] = $comboCssOnlySameBase;
+		}
+
+		$finalResources['requires'] = $requires;
 
 		return $finalResources;
 	}
@@ -300,15 +297,15 @@ class AutoloadStatic extends SystemPluginAbstract{
 						if(!isset($pkgHash[$name])){
 							$pkg = $maps[$name];
 							//缓存
-							$this->pkgUrlCache[$pkgHash[$name] = $pkg['url']] = true;
+							$this->pkgUrlCache[$pkgHash[$name] = $pkg['url']] = $name;
+							$this->urlCache[$pkg['url']] = $pkg;
 						}
 
 						$url = $hash[$v] = $pkgHash[$name];
 					}else{
 						$url = $hash[$v] = $info['url'];
+						$this->urlCache[$url] = $info;
 					}
-
-					$this->urlCache[$url] = true;
 
 					//如果自己有deps，没打包，直接加载依赖
 					if(isset($info['deps'])){
@@ -356,19 +353,25 @@ class AutoloadStatic extends SystemPluginAbstract{
 		if($info['method'] == 'load') return $content;
 
 		$view = $this->view;
-		$this->domain && $view->set('FEATHER_STATIC_DOMAIN', $this->domain);
+		$cacheDir = $this->view->getTempDir();
+
+		if(!$cacheDir){
+			throw new \Exception('AutoStatic Load Plugin need view engine\'s tempDir as cacheDir, Please set view engine\s tempDir first!');
+		}
+
+		if(isset($this->domain)){
+			$view->set('FEATHER_STATIC_DOMAIN', $this->domain);
+		}
 
 		$lastModifyTime = $this->getMaxMapModifyTime();
 		$cacheFileName = md5($info['realpath']);
 		$cache = null;
 
-		if($this->caching){
-			$cacheDir = $this->getOption('cacheDir', $this->view->getTempDir());
-			$cachePath = $cacheDir . '/' . $cacheFileName;
+		$cacheDir = $this->view->getTempDir();
+		$cachePath = $cacheDir . '/' . $cacheFileName;
 
-			if($cache = FeatherView\Helper::readFile($cachePath)){
-				$cache = unserialize($cache);
-			}
+		if($cache = FeatherView\Helper::readFile($cachePath)){
+			$cache = unserialize($cache);
 		}
 
 		if(!$cache 
@@ -397,8 +400,7 @@ class AutoloadStatic extends SystemPluginAbstract{
 				'FILE_PATH' => $info['path']
 			);
 
-			//如果需要设置缓存
-			$this->caching && FeatherView\Helper::writeFile($cachePath, serialize($cache));
+			FeatherView\Helper::writeFile($cachePath, serialize($cache));
 		}
 
 		//设置模版值

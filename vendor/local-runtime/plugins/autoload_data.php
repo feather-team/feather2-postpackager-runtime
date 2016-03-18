@@ -8,10 +8,16 @@ class AutoloadData extends SystemPluginAbstract{
 	private $map = array();
 
 	private function initMap(){
-		//合并map表
-		foreach((array)$this->getOption('maps') as $resource){
-			$resource = require($resource);
-			$this->map = array_merge($this->map, $resource['map']);
+		$dir = $this->view->getTemplateDir();
+		$dir = $dir[0];
+
+		if(file_exists("{$dir}/map")){
+			$files = glob("{$dir}/map/**.php");
+
+			foreach($files as $file){
+				$resource = require($file);
+				$this->map = array_merge($this->map, $resource['map']);
+			}
 		}
 	}
 

@@ -96,9 +96,14 @@ if($s === false || $s == $suffix){
             'tempDir' => CACHE_PATH,
             'systemPlugins' => array()
         );
+    }else{
+        $engineConfig['tempDir'] = CACHE_PATH;
     }   
 
-    $engineConfig['systemPlugins']['autoload_static']['combo'] = $conf['combo'];
+    $engineConfig['systemPlugins']['autoload_static']['combo'] = array(
+        'combo' => $conf['combo'],
+        'comboCssOnlySameBase' => $conf['cssA2R']
+    );
     $engineConfig['systemPlugins'] = array_merge($engineConfig['systemPlugins'], array(
         'autoload_static' => array(
            'domain' => "http://{$_SERVER['HTTP_HOST']}",
@@ -106,8 +111,7 @@ if($s === false || $s == $suffix){
         ),
 
         'autoload_data' => array(
-            'maps' => glob(VIEW_PATH . '/map/**'),
-            'data_dir' => DATA_PATH
+            'dataDir' => DATA_PATH
         ),
 
         'static_position'
