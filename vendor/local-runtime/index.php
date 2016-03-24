@@ -45,7 +45,7 @@ $uri = $_SERVER['REQUEST_URI'];
 
 $comboSplit = explode('??', $uri);
 
-if(!empty($conf['combo']) && count($comboSplit) > 1){
+if($conf['combo']['level'] > -1 && count($comboSplit) > 1){
     //is combo
     $tmp_files = explode(',', $comboSplit[1]);
     $content = array();
@@ -100,14 +100,14 @@ if($s === false || $s == $suffix){
         $engineConfig['tempDir'] = CACHE_PATH;
     }   
 
-    $engineConfig['systemPlugins']['autoload_static']['combo'] = array(
-        'combo' => $conf['combo'],
-        'comboCssOnlySameBase' => $conf['cssA2R']
-    );
     $engineConfig['systemPlugins'] = array_merge($engineConfig['systemPlugins'], array(
         'autoload_static' => array(
            'domain' => "http://{$_SERVER['HTTP_HOST']}",
-           'combo' => $conf['combo'] 
+           "combo" => array(
+                'level' => $conf['combo']['level'],
+                'cssOnlySameBase' => $conf['cssA2R'],
+                'maxUrlLength' => $conf['combo']['maxUrlLength']
+            )
         ),
 
         'autoload_data' => array(
@@ -121,9 +121,6 @@ if($s === false || $s == $suffix){
     $view = new FeatherView\Engine($engineConfig);
 
     $path = '/' . preg_replace('/\..+$/', '', implode('/', $path));
-    $data = load(DATA_PATH . $path . '.php');
-
-    is_array($data) && $view->set($data);
     $view->display($path);
 }else{
     if($path[0] == 'data'){

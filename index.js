@@ -30,8 +30,9 @@ module.exports = function(ret, conf, setting, opt){
 			userFile.release = '/view/engine.user.php'
 
 			content = feather.util.read(VENDOR_DIR + '/tpl/engine.config.php', true);
-			content = content.replace('#combo#', feather.config.get('combo'));
-			content = content.replace('#comboCssOnlySameBase#', feather.config.get('cssA2R'));
+			content = content.replace('#level#', feather.config.get('combo.level'));
+			content = content.replace('#cssOnlySameBase#', feather.config.get('cssA2R'));
+			content = content.replace('#maxUrlLength#', feather.config.get('combo.maxUrlLength'));
 			file.setContent(content);
 		}else{
 			feather.log.error('View engine\'s config file [/conf/engine/online.php] is not exists!');

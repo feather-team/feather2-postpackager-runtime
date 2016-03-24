@@ -119,12 +119,6 @@ class Engine{
         }
 
         if($realpath = Helper::findFile($this->templateDir, $path, null)){
-            if($data){
-                $data = array_merge($this->data, $data);
-            }else{
-                $data = $this->data;
-            }
-
             $content = Helper::readFile($realpath);
             $content = $this->pluginManager->callSystemPlugins($content, array(
                 'method' => $method ? $method : 'fetch',
@@ -132,6 +126,12 @@ class Engine{
                 'realpath' => $realpath,
                 'data' => $data
             ));
+
+            if($data){
+                $data = array_merge($this->data, $data);
+            }else{
+                $data = $this->data;
+            }
 
             return $this->evalContent($data, $content, $path);
         }else{

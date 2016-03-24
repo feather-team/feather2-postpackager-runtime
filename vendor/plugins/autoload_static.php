@@ -15,6 +15,7 @@ class AutoloadStatic extends SystemPluginAbstract{
 	private $combo;
 	private $urlCache = array();
 	private $pkgUrlCache = array();
+	private $pageletCss = array();
 	private static $RESOURCES_TYPE = array('headJs', 'bottomJs', 'css');
 	private static $CONCATS_TYPE = array('headJs', 'bottomJs', 'css', 'asyncs', 'deps');
 
@@ -25,7 +26,7 @@ class AutoloadStatic extends SystemPluginAbstract{
 			$this->domain = '';
 		}
 
-		$this->combo = $this->getOption('combo', false);
+		$this->combo = $this->getOption('combo');
 		$this->initMapSources();
 	}
 
@@ -139,17 +140,33 @@ class AutoloadStatic extends SystemPluginAbstract{
 		$maps = $this->map;
 		$selfMap = $this->getSelfMap($path);
 
-		//如果不是pagelet，并且asyncs和deps不为空时，说明是一个正常，并且需要使用通用js
-		if(!isset($selfMap['isPagelet'])){
-			if(!empty($selfMap['asyncs']) || !empty($selfMap['deps'])){
-				$selfMap = array_merge_recursive($this->commonMap, $selfMap);
-			}
-		}
-
 		$tmpCss = array();
 		$finalResources = array();
 		$finalRequires = array();
 		$requires = array();
+
+		//如果不是pagelet，并且asyncs和deps不为空时，说明是一个正常，并且需要使用通用js
+		if(isset($selfMap['isPagelet'])){
+			if(empty($selfMap['asyncs'])){
+				$selfMap['asyncs'] = array();
+			}
+
+			if(isset($selfMap['css'])){
+				if(empty($selfMap['asyncs'])){
+					$selfMap['asyncs'] = $selfMap['css'];
+				}else{
+					$selfMap['asyncs'] = array_merge($selfMap['css'], $selfMap['asyncs']);
+				}
+				
+				$finalResources['pageletCss'] = $selfMap['css'];
+				unset($selfMap['css']);
+			}
+		}else{
+			//if(!empty($selfMap['asyncs']) || !empty($selfMap['deps'])){
+			if($this->useRequire){
+				$selfMap = array_merge_recursive($this->commonMap, $selfMap);
+			}
+		}
 
 		foreach(self::$RESOURCES_TYPE as $type){
 			if(isset($selfMap[$type])){
@@ -177,7 +194,7 @@ class AutoloadStatic extends SystemPluginAbstract{
 		}
 
 		$finalResources['css'] = array_merge($finalResources['css'], $tmpCss);
-
+		
 		if(!empty($selfMap['asyncs'])){
 			$requires = $selfMap['asyncs'];
 			$finalRequires = $this->getUrl($requires, true);
@@ -210,17 +227,24 @@ class AutoloadStatic extends SystemPluginAbstract{
 		unset($v);
 
 		//get real url
-		$comboCssOnlySameBase = $this->getOption('comboCssOnlySameBase', false);
+		$comboOption = $this->getOption('combo');
+		$comboCssOnlySameBase = $comboOption['cssOnlySameBase'];
+		$comboLevel = $comboOption['level'];
+		$comboMaxUrlLength = $comboOption['maxUrlLength'];
 
 		foreach($finalResources as &$resources){
-			//do combo
-			if($this->combo && !empty($resources)){
+			//do comboLevel
+			if($comboLevel > -1 && !empty($resources)){
 				$combos = array();
 				$remotes = array();
 
 				foreach($resources as $url){
 					if(isset($this->urlCache[$url])){
-						$combos[] = $url;
+						if($comboLevel == 0 && !isset($this->pkgUrlCache[$url]) || $comboLevel > 0){
+							$combos[] = $url;
+						}else{
+							$remotes[] = $url;
+						}
 					}else{
 						$remotes[] = $url;
 					}
@@ -245,13 +269,25 @@ class AutoloadStatic extends SystemPluginAbstract{
 					
 					if(count($urls) > 1){
 						$baseNames = array();
-						$len = strlen($dir);
+						$dirLength = strlen($dir);
+						$len = 0;
 
 						foreach($urls as $url){
-							$baseNames[] = substr($url, $len);
+							$url = substr($url, $dirLength);
+							$baseNames[] = $url;
+
+							if(strlen($url) + $len >= $comboMaxUrlLength){
+								$len = 0;
+								$resources[] = $dir . '??' . implode(',', $baseNames); 
+								$baseNames = array();
+							}else{
+								$len += strlen($url);
+							}
 						}
 
-						$resources[] = $dir . '??' . implode(',', $baseNames); 
+						if(count($baseNames)){
+							$resources[] = $dir . '??' . implode(',', $baseNames); 
+						}
 					}else{
 						$resources[] = $urls[0];
 					}	
@@ -269,9 +305,8 @@ class AutoloadStatic extends SystemPluginAbstract{
 			'deps' => $finalDeps
 		);
 
-		if($this->combo){
-			$requires['combo'] = $this->combo;
-			$requires['comboCssOnlySameBase'] = $comboCssOnlySameBase;
+		if($comboLevel > -1){
+			$requires['combo'] = $comboOption;
 		}
 
 		$finalResources['requires'] = $requires;
@@ -356,7 +391,7 @@ class AutoloadStatic extends SystemPluginAbstract{
 		$cacheDir = $this->view->getTempDir();
 
 		if(!$cacheDir){
-			throw new \Exception('AutoStatic Load Plugin need view engine\'s tempDir as cacheDir, Please set view engine\s tempDir first!');
+			throw new \Exception('AutoStatic Load Plugin need view engine\'s tempDir as cacheDir, Please set view engine\'s tempDir first!');
 		}
 
 		if(isset($this->domain)){
@@ -400,11 +435,16 @@ class AutoloadStatic extends SystemPluginAbstract{
 				'FILE_PATH' => $info['path']
 			);
 
+			if(isset($resources['pageletCss'])){
+				$cache['FEATHER_PAGELET_CSS_JSON'] = self::jsonEncode($resources['pageletCss']);
+			}
+
 			FeatherView\Helper::writeFile($cachePath, serialize($cache));
 		}
 
 		//设置模版值
 		$view->set($cache);
+		$view->set('FEATHER_HEAD_RESOURCE_LOADED', false);
 
 		return $content;
 	}
