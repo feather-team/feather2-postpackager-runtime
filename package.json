@@ -1,6 +1,6 @@
 {
   "name": "feather2-postpackager-runtime",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "feather2 运行环境处理，必要文件产出",
   "main": "index.js",
   "scripts": {
