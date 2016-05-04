@@ -7,10 +7,11 @@ class Engine{
     protected $templateDir = array();
     protected $tempDir;
     protected $data = array();
+    protected $systemPlugins = array();
     protected $pluginManager;
 
     public function __construct($config = array()){
-        $this->pluginManager = new Plugin\Manager($this);
+        $this->pluginManager = new Plugin\Manager();
         $this->initConfig($config);
     }
 
@@ -26,7 +27,7 @@ class Engine{
                     break;
 
                 case 'systemPlugins':
-                    $this->registerSystemPlugin($value);
+                    $this->systemPlugins = (array)$value;
                     break;
 
                 case 'tempDir':
@@ -35,22 +36,6 @@ class Engine{
 
                 default: ;
             }
-        }
-    }
-
-    public function registerSystemPlugin($name, $opt = null){
-        if(is_array($name)){
-            $plugins = $name;
-
-            foreach($plugins as $name => $opt){
-                if(is_numeric($name)){
-                    $this->pluginManager->registerSystemPlugin($opt);
-                }else{
-                    $this->pluginManager->registerSystemPlugin($name, $opt);
-                }
-            }
-        }else{
-            $this->pluginManager->registerSystemPlugin($name, $opt);
         }
     }
 
@@ -120,7 +105,7 @@ class Engine{
 
         if($realpath = Helper::findFile($this->templateDir, $path, null)){
             $content = Helper::readFile($realpath);
-            $content = $this->pluginManager->callSystemPlugins($content, array(
+            $content = $this->callSystemPlugins($content, array(
                 'method' => $method ? $method : 'fetch',
                 'path' => $path,
                 'realpath' => $realpath,
@@ -137,6 +122,19 @@ class Engine{
         }else{
             throw new \Exception("template [{$path}] is not exists!");
         }
+    }
+
+    protected function callSystemPlugins($content, $info){
+        foreach($this->systemPlugins as $name => $opt){
+            if(is_numeric($name)){
+                $name = $opt;
+                $opt = null;
+            }
+
+            $content = $this->pluginManager->instance($name, $opt, $this)->exec($content, $info);
+        }
+
+        return $content;
     }
 
     //显示模版

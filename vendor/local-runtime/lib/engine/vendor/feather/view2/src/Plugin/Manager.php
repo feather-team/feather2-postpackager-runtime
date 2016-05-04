@@ -4,29 +4,14 @@ use FeatherView;
 
 class Manager{
     protected $dirs = array();
-    protected $engine;
-    protected $systemItems = array();
     protected $instances = array();
 
-    public function __construct(FeatherView\Engine $engine, $dir = null){
-        $this->engine = $engine;
+    public function __construct($dir = null){
         $dir && $this->setPluginDir($dir);
     }
 
-    public function registerSystemPlugin($name, $opt = null){
-        $this->systemItems[$name] = $opt;
-    }
-
-    public function callSystemPlugins($content, $info = array()){
-        foreach($this->systemItems as $name => $opt){
-            $content = $this->instance($name, $opt)->exec($content, $info);
-        }
-
-        return $content;
-    }
-
     //获取plugin实例
-    public function instance($name, $opt = null){
+    public function instance($name, $opt = null, $engine = null){
         if(isset($this->instances[$name])){
             return $this->instances[$name];
         }
@@ -48,7 +33,7 @@ class Manager{
             }
         }
 
-        return $this->instances[$name] = new $realClassName($opt, $this->engine);
+        return $this->instances[$name] = new $realClassName($opt, $engine);
     }
 
     public function setPluginDir($dir = '/'){
