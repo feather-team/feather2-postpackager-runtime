@@ -45,7 +45,7 @@ $uri = $_SERVER['REQUEST_URI'];
 
 $comboSplit = explode('??', $uri);
 
-if($conf['combo']['level'] > -1 && count($comboSplit) > 1){
+if($conf['combo']['use'] && count($comboSplit) > 1){
     //is combo
     $tmp_files = explode(',', $comboSplit[1]);
     $content = array();
@@ -104,7 +104,8 @@ if($s === false || $s == $suffix){
         'autoload_static' => array(
            'domain' => "http://{$_SERVER['HTTP_HOST']}",
            "combo" => array(
-                'level' => $conf['combo']['level'],
+                'use' => $conf['combo']['use'],
+                'onlyUnPackFile' => $conf['combo']['onlyUnPackFile'],
                 'cssOnlySameBase' => $conf['cssA2R'],
                 'maxUrlLength' => $conf['combo']['maxUrlLength']
             )

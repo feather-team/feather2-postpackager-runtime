@@ -27,7 +27,7 @@ class Engine{
                     break;
 
                 case 'systemPlugins':
-                    $this->systemPlugins = (array)$value;
+                    $this->registerSystemPlugin((array)$value);
                     break;
 
                 case 'tempDir':
@@ -69,8 +69,30 @@ class Engine{
         return $this->tempDir;
     }
 
+    public function registerSystemPlugin($name, $opt = null){
+        if(is_array($name)){
+            foreach($name as $k => $v){
+                if(is_numeric($k)){
+                    $this->systemPlugins[$v] = null;
+                }else{
+                    $this->systemPlugins[$k] = $v;
+                }
+            }
+        }else{
+            $this->systemPlugins[$k] = $v;
+        }
+    }
+
     public function plugin($name, $opt = null){
         return $this->pluginManager->instance($name, $opt);
+    }
+
+    protected function callSystemPlugins($content, $info){
+        foreach($this->systemPlugins as $name => $opt){
+            $content = $this->pluginManager->instance($name, $opt, $this)->exec($content, $info);
+        }
+
+        return $content;
     }
 
     //设置值
@@ -122,19 +144,6 @@ class Engine{
         }else{
             throw new \Exception("template [{$path}] is not exists!");
         }
-    }
-
-    protected function callSystemPlugins($content, $info){
-        foreach($this->systemPlugins as $name => $opt){
-            if(is_numeric($name)){
-                $name = $opt;
-                $opt = null;
-            }
-
-            $content = $this->pluginManager->instance($name, $opt, $this)->exec($content, $info);
-        }
-
-        return $content;
     }
 
     //显示模版

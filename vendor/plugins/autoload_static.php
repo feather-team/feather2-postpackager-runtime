@@ -228,19 +228,19 @@ class AutoloadStatic extends SystemPluginAbstract{
 
 		//get real url
 		$comboOption = $this->getOption('combo');
+		$useCombo = $comboOption['use'];
 		$comboCssOnlySameBase = $comboOption['cssOnlySameBase'];
-		$comboLevel = $comboOption['level'];
+		$comboOnlyUnPackFile = $comboOption['onlyUnPackFile'];
 		$comboMaxUrlLength = $comboOption['maxUrlLength'];
 
 		foreach($finalResources as &$resources){
-			//do comboLevel
-			if($comboLevel > -1 && !empty($resources)){
+			if($useCombo && !empty($resources)){
 				$combos = array();
 				$remotes = array();
 
 				foreach($resources as $url){
 					if(isset($this->urlCache[$url])){
-						if($comboLevel == 0 && !isset($this->pkgUrlCache[$url]) || $comboLevel > 0){
+						if(!$comboOnlyUnPackFile && !isset($this->pkgUrlCache[$url]) || $comboOnlyUnPackFile){
 							$combos[] = $url;
 						}else{
 							$remotes[] = $url;
@@ -305,7 +305,7 @@ class AutoloadStatic extends SystemPluginAbstract{
 			'deps' => $finalDeps
 		);
 
-		if($comboLevel > -1){
+		if($useCombo){
 			$requires['combo'] = $comboOption;
 		}
 
@@ -422,7 +422,7 @@ class AutoloadStatic extends SystemPluginAbstract{
 			$headJsInline = array();
 
 			if(!empty($resources['requires']) && !empty($resources['requires']['map']) && $this->useRequire){
-				$headJsInline[] = '<script>require.mergeConfig(' . self::jsonEncode($resources['requires']) . ')</script>';
+				$headJsInline[] = '<script>require.config(' . self::jsonEncode($resources['requires']) . ')</script>';
 			}
 		
 			$cache = array(
