@@ -6,11 +6,11 @@ module.exports = function(ret, conf, setting, opt){
 	if(modulename == 'common' || !modulename){
 		var staticPath = ROOT + '/_static_.' + feather.config.get('template.suffix');
 		var staticFile = new feather.file(staticPath);
-		staticFile.setContent(feather.file.wrap(VENDOR_DIR + '/tpl/static.php').getContent());
+		staticFile.setContent(feather.file.wrap(VENDOR_DIR + '/tpl/static/' + feather.config.get('template.engine') + '.php').getContent());
         ret.pkg[staticPath] = staticFile;
     }
 
-	['autoload_static', 'script_collection'].forEach(function(name){
+	['autoload_static', 'script_collection', 'FeatherResource'].forEach(function(name){
 		var path = '/plugins/' + name + '.php';
 		var file = feather.file.wrap(ROOT + path);
 	    file.setContent(feather.file.wrap(VENDOR_DIR + path).getContent());

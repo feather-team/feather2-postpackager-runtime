@@ -102,7 +102,6 @@ if($s === false || $s == $suffix){
 
     $engineConfig['systemPlugins'] = array_merge($engineConfig['systemPlugins'], array(
         'autoload_static' => array(
-           'domain' => "http://{$_SERVER['HTTP_HOST']}",
            "combo" => array(
                 'use' => $conf['combo']['use'],
                 'onlyUnPackFile' => $conf['combo']['onlyUnPackFile'],

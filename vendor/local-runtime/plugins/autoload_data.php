@@ -43,7 +43,7 @@ class AutoloadData extends SystemPluginAbstract{
 
 		$this->initMap();
 
-		$dataRoot = rtrim($this->getOption('data_dir'), '/') . '/';
+		$dataRoot = rtrim($this->getOption('dataDir'), '/') . '/';
 		$fData = array();
 
 		$path = $info['path'];

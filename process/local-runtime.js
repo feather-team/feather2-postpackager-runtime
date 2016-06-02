@@ -8,17 +8,14 @@ module.exports = function(ret, conf, setting, opt){
     var modulename = feather.config.get('project.modulename'), ns = feather.config.get('project.name');
     var www = feather.project.getTempPath('www'), previewRoot = www + '/preview', vendor = __dirname + '/../vendor/local-runtime';
     var proj = www + '/proj/' + ns;
+    var root = feather.project.getProjectPath();
 
-    if(feather.config.get('project.mode') == 'php'){
-        var root = feather.project.getProjectPath();
-
-        if(modulename){
-            if(modulename == 'common'){
-                feather.util.del(proj + '/view/map/map.php');
-            }
-        }else{
-            feather.util.del(proj + '/view/map');
+    if(modulename){
+        if(modulename == 'common'){
+            feather.util.del(proj + '/view/map/map.php');
         }
+    }else{
+        feather.util.del(proj + '/view/map');
     }
 
     var cssA2R = feather.config.get('cssA2R');
@@ -30,7 +27,6 @@ module.exports = function(ret, conf, setting, opt){
     //生成conf
     var hash = {
         ns: ns,
-        mode: feather.config.get('project.mode'),
         template: {
             suffix: feather.config.get('template.suffix')
         },
