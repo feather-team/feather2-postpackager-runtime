@@ -2,7 +2,7 @@
 $output = array();
 
 if($type == 'head'){
-    if(!isset($FEATHER_HEAD_RESOURCE_LOADED)){
+    if(!$__env->shared('FEATHER_HEAD_RESOURCE_LOADED')){
         foreach($FEATHER_USE_STYLES as $value){
             $output[] = '<link rel="stylesheet" href="' . $value . '" type="text/css" />';
         }
@@ -18,13 +18,13 @@ if($type == 'head'){
         $__env->share('FEATHER_HEAD_RESOURCE_LOADED', true);
     }
 }else{
-    if(!isset($FEATHER_BOTTOM_RESOURCE_LOADED)){
+    if(!$__env->shared('FEATHER_BOTTOM_RESOURCE_LOADED')){
         foreach($FEATHER_USE_SCRIPTS as $value){
             $output[] = '<script src="' . $value . '"></script>';
         }
-
+       
         $__env->share('FEATHER_BOTTOM_RESOURCE_LOADED', true);
     }
 }
 
-echo implode('', $output);
+echo eval('?>' . implode('', $output));
